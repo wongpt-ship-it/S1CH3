@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>代數簡介：M記大挑戰與空間魔法</title>
+    <style>
+        /* 餐廳與學習主題配色 */
+        :root {
+            --primary-red: #E3000F;
+            --primary-yellow: #FFC72C;
+            --teach-blue: #0056b3;
+            --bg-color: #f4f7f6;
+            --dark-text: #333;
+        }
+
+        /* 全局設定：防止 iPad 滑動及計算邊界 */
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: 'Comic Sans MS', 'Microsoft JhengHei', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 5px; /* 縮小邊距 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh; /* 鎖定全螢幕高度 */
+            overflow: hidden; /* 禁止頁面滾動 */
+        }
+
+        #app-container {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            width: 100%;
+            max-width: 900px;
+            height: 98vh; /* 最大化利用 iPad 螢幕 */
+            max-height: 800px;
+            display: flex;
+            flex-direction: column; /* 讓內部元素垂直排列 */
+            border: 5px solid var(--primary-red);
+            position: relative;
+        }
+
+        /* 標題列 (高度壓縮) */
+        header {
+            background-color: var(--primary-red); color: white;
+            text-align: center; padding: 10px; font-size: 22px; font-weight: bold; position: relative;
+            flex-shrink: 0;
+        }
+
+        #home-btn {
+            position: absolute; left: 10px; top: 8px;
+            background-color: white; color: var(--primary-red);
+            border: none; padding: 5px 10px; border-radius: 8px;
+            font-size: 14px; cursor: pointer; font-weight: bold;
+            display: none; box-shadow: 0 3px 0 #b3000a;
+        }
+        #home-btn:active { transform: translateY(3px); box-shadow: none; }
+
+        #mode-badge {
+            background-color: var(--primary-yellow); color: var(--primary-red);
+            padding: 4px 12px; border-radius: 15px; font-size: 14px;
+            position: absolute; right: 10px; top: 8px;
+            display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-weight: bold;
+        }
+
+        /* 主頁畫面 */
+        #home-screen {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            flex-grow: 1; text-align: center;
+        }
+        .home-logo { font-size: 70px; margin-bottom: 5px; }
+        .home-title { font-size: 32px; color: var(--primary-red); margin-bottom: 30px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        .mode-btn {
+            width: 80%; max-width: 400px; padding: 15px; margin: 10px 0;
+            font-size: 22px; font-weight: bold; border: none; border-radius: 12px;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .btn-teach { background-color: #e6f7ff; color: var(--teach-blue); border: 3px solid #91d5ff; box-shadow: 0 5px 0 #91d5ff; }
+        .btn-game { background-color: #fffbe6; color: #ad8b00; border: 3px solid #ffe58f; box-shadow: 0 5px 0 #ffe58f; }
+        .mode-btn:active { transform: translateY(5px); box-shadow: 0 0 0 transparent; }
+
+        /* 遊戲畫面架構 */
+        #game-screen { display: none; flex-direction: column; height: 100%; flex-grow: 1; }
+        
+        .menu-bar { display: flex; justify-content: space-around; background-color: #fff9e6; padding: 6px; border-bottom: 2px dashed #ccc; font-size: 18px; z-index: 10; flex-shrink: 0;}
+        .menu-item { display: flex; align-items: center; gap: 5px; font-weight: bold; }
+        
+        /* 題目顯示區：彈性生長，佔據中間空間 */
+        .question-area { text-align: center; padding: 10px; flex-grow: 1; display: flex; flex-direction: column; justify-content: center;}
+        .food-icons { font-size: 40px; margin-bottom: 5px; letter-spacing: 5px; }
+        .question-text { font-size: 20px; color: var(--dark-text); font-weight: bold; white-space: pre-line;}
+
+        /* ====== 幾何圖形 CSS (適度縮小) ====== */
+        .geometry-container { display: flex; justify-content: center; align-items: center; margin: 15px 0 10px 0; }
+        .geo-shape { position: relative; border: 3px solid #333; display: flex; justify-content: center; align-items: center; box-shadow: 3px 3px 0 rgba(0,0,0,0.1); }
+        .geo-rect { width: 150px; height: 75px; background-color: #bae0ff; border-color: #1890ff; }
+        .geo-square { width: 110px; height: 110px; background-color: #d3adf7; border-color: #722ed1; }
+        .geo-label-top { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); font-size: 22px; font-family: 'Times New Roman', serif; font-weight: bold; color: #333; }
+        .geo-label-left { position: absolute; left: -25px; top: 50%; transform: translateY(-50%); font-size: 22px; font-family: 'Times New Roman', serif; font-weight: bold; color: #333; }
+
+        /* ====== 動態麥樂雞模擬排版 CSS (解決字體重疊與適配 iPad) ====== */
+        .vs-container { display: flex; justify-content: center; gap: 10px; width: 98%; margin: 0 auto; height: 100%;}
+        .vs-box { 
+            flex: 1; border-radius: 10px; border: 3px dashed; text-align: left; 
+            position: relative; overflow: hidden; 
+            background-color: #f9f9f9; display: flex; flex-direction: column;
+        }
+        .vs-left { border-color: #95de64; }
+        .vs-right { border-color: #ffadd2; }
+        
+        /* 將上半部文字區域獨立，確保不被下方結果框蓋住 */
+        .vs-text-area { padding: 8px 12px; font-size: 16px; line-height: 1.4; position: relative; z-index: 20; }
+        
+        .vs-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; text-align: center; border-bottom: 2px solid; padding-bottom: 3px;}
+        .vs-left .vs-title { color: #237804; border-color:#237804; }
+        .vs-right .vs-title { color: #c41d7f; border-color:#c41d7f;}
+        
+        /* 算式背景毛玻璃半透明特效 (固定在底部) */
+        .sim-result { 
+            position: absolute;
+            bottom: 5px; /* 貼近底部 */
+            left: 5%;
+            width: 90%;
+            height: 60px; /* 固定高度，避免過大 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px; 
+            font-weight: bold; 
+            text-align: center; 
+            background: rgba(255, 255, 255, 0.85); /* 半透明白底 */
+            backdrop-filter: blur(4px); /* 毛玻璃模糊背後麥樂雞 */
+            -webkit-backdrop-filter: blur(4px); /* Safari 支援 */
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            z-index: 20; /* 永遠在麥樂雞(10)之上 */
+            pointer-events: none;
+        }
+
+        /* --- 3D 掉落動畫粒子 --- */
+        .nugget-particle {
+            position: absolute;
+            top: -40px;
+            font-size: 35px; /* 稍微縮小以適應 iPad */
+            filter: drop-shadow(2px 3px 2px rgba(0,0,0,0.4)); 
+            z-index: 10; /* 在背景之上，毛玻璃之下 */
+            pointer-events: none;
+            animation: fallAnimation forwards cubic-bezier(0.4, 0.0, 1, 1);
+        }
+        @keyframes fallAnimation {
+            0% { top: -40px; transform: rotate(0deg) scale(1.2); }
+            100% { top: var(--endY); transform: rotate(var(--rot)) scale(1); }
+        }
+
+        /* 輸入顯示螢幕 (壓縮高度) */
+        .display-screen {
+            background-color: #e8f4f8; border: 3px solid #b3d4e0; border-radius: 10px;
+            height: 65px; width: 85%; margin: 0 auto 10px auto;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 34px; font-weight: bold; color: var(--teach-blue); letter-spacing: 2px;
+            flex-shrink: 0;
+        }
+        .fraction { display: inline-flex; flex-direction: column; justify-content: center; align-items: center; vertical-align: middle; margin: 0 5px; font-size: 28px;}
+        .fraction .numerator { border-bottom: 3px solid var(--teach-blue); padding: 0 8px; line-height: 1.1; }
+        .fraction .denominator { padding: 0 8px; line-height: 1.1; }
+
+        /* 虛擬鍵盤 (壓縮內距，適配 iPad) */
+        .keyboard { 
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; 
+            padding: 10px 15px 15px 15px; background-color: #f0f0f0; flex-shrink: 0; 
+        }
+        .key { 
+            background-color: white; border: 2px solid #ccc; border-radius: 8px; 
+            padding: 8px 0; font-size: 22px; font-weight: bold; cursor: pointer; 
+            box-shadow: 0 4px 0 #ccc; transition: all 0.1s; 
+            display: flex; justify-content: center; align-items: center;
+        }
+        .key:active { transform: translateY(4px); box-shadow: 0 0 0 transparent; }
+        .key.var-key { background-color: #e6f7ff; border-color: #91d5ff; color: #0050b3; box-shadow: 0 4px 0 #91d5ff;}
+        .key.op-key { background-color: #fffbe6; border-color: #ffe58f; color: #ad8b00; box-shadow: 0 4px 0 #ffe58f;}
+        .key.pow-key { background-color: #f6ffed; border-color: #b7eb8f; color: #237804; box-shadow: 0 4px 0 #b7eb8f;}
+        .key.del { background-color: #ffccc7; border-color: #ffa39e; color: #a8071a; box-shadow: 0 4px 0 #ffa39e; grid-column: span 2;}
+        
+        .key.submit { background-color: var(--primary-yellow); border-color: #e5b225; color: var(--primary-red); box-shadow: 0 4px 0 #e5b225; grid-column: span 3; font-size: 22px;}
+        .key.finish-btn { background-color: #91d5ff; border-color: #40a9ff; color: #0050b3; box-shadow: 0 4px 0 #40a9ff; font-size: 18px; display: none; }
+
+        /* 回饋彈出視窗 */
+        #feedback-modal { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000; border-radius: 15px;}
+        .modal-content { background: white; padding: 25px; border-radius: 15px; text-align: center; font-size: 20px; width: 85%; max-width: 450px; line-height: 1.4; }
+        .modal-title-correct { color: #237804; font-size: 26px; margin-top: 0; margin-bottom: 10px;}
+        .modal-title-hint { color: #E3000F; font-size: 26px; margin-top: 0; margin-bottom: 10px;}
+        .modal-btn { margin-top: 20px; padding: 10px 30px; font-size: 20px; background-color: var(--primary-yellow); border: none; border-radius: 10px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 0 #e5b225; }
+        .modal-btn:active { transform: translateY(4px); box-shadow: none; }
+        .math-text { font-family: 'Times New Roman', serif; font-style: italic; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <header>
+        <button id="home-btn" onclick="showHome()">🏠 返回主頁</button>
+        代數世界大挑戰
+        <div id="mode-badge"></div>
+    </header>
+
+    <div id="home-screen">
+        <div class="home-logo">🍔🍟</div>
+        <div class="home-title">代數啟蒙之旅</div>
+        <button class="mode-btn btn-teach" onclick="startMode('teach')">
+            👨‍🏫 教學模式 (7大概念闖關)
+        </button>
+        <button class="mode-btn btn-game" onclick="startMode('game')">
+            🕹️ 遊戲模式 (5關漸進挑戰)
+        </button>
+    </div>
+
+    <div id="game-screen">
+        <div class="menu-bar" id="menu-bar"></div>
+        <div class="question-area">
+            <div class="food-icons" id="food-icons"></div>
+            <div class="question-text" id="question-text"></div>
+        </div>
+        <div class="display-screen" id="display-screen"></div>
+
+        <div class="keyboard">
+            <button class="key" onclick="typeChar('1')">1</button>
+            <button class="key" onclick="typeChar('2')">2</button>
+            <button class="key" onclick="typeChar('3')">3</button>
+            <button class="key var-key" onclick="typeChar('x')"><span class="math-text">x</span></button>
+            <button class="key op-key" onclick="typeChar('+')">+</button>
+            <button class="key op-key" onclick="typeChar('-')">-</button>
+            <button class="key pow-key" onclick="typeChar('²')">²</button>
+
+            <button class="key" onclick="typeChar('4')">4</button>
+            <button class="key" onclick="typeChar('5')">5</button>
+            <button class="key" onclick="typeChar('6')">6</button>
+            <button class="key var-key" onclick="typeChar('y')"><span class="math-text">y</span></button>
+            <button class="key op-key" onclick="typeChar('×')">×</button>
+            <button class="key op-key" onclick="typeChar('÷')">÷</button>
+            <button class="key" onclick="typeChar('0')">0</button>
+
+            <button class="key" onclick="typeChar('7')">7</button>
+            <button class="key" onclick="typeChar('8')">8</button>
+            <button class="key" onclick="typeChar('9')">9</button>
+            <button class="key var-key" onclick="typeChar('z')"><span class="math-text">z</span></button>
+            <button class="key op-key" onclick="typeChar('(')">(</button>
+            <button class="key op-key" onclick="typeChar(')')">)</button>
+            <button class="key action-key del" style="grid-column: 1;" onclick="clearAll()">C</button> 
+
+            <button class="key action-key del" onclick="backspace()">⌫ 退格</button>
+            
+            <button class="key action-key submit" id="btn-submit" onclick="checkAnswer()">✔ 確定提交</button>
+            <button class="key finish-btn" id="btn-finish" onclick="finishTeachMode()">⭐ 完成教學</button>
+        </div>
+    </div>
+
+    <div id="feedback-modal">
+        <div class="modal-content">
+            <h2 id="modal-title"></h2>
+            <p id="modal-msg"></p>
+            <button class="modal-btn" onclick="nextAction()">繼續</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentMode = 'teach'; 
+    let currentStage = 0; 
+    let currentInput = "";
+    let currentTargetAnswers = [];
+    let isWaitingForNext = false; 
+
+    const rectHTML = `<div class="geometry-container"><div class="geo-shape geo-rect"><span class="geo-label-top"><span class="math-text">x</span></span><span class="geo-label-left">2</span></div></div>`;
+    const squareHTML = `<div class="geometry-container"><div class="geo-shape geo-square"><span class="geo-label-top"><span class="math-text">x</span></span><span class="geo-label-left"><span class="math-text">x</span></span></div></div>`;
+
+    // 終極對比 HTML 容器 (修正佈局，確保文字不被蓋住)
+    const partySimHTML = `
+        <div class="vs-container">
+            <div id="vs-left" class="vs-box vs-left">
+                <div class="vs-text-area">
+                    <div class="vs-title">2<span class="math-text">x</span> (倍數)</div>
+                    <div>🧑‍🤝‍🧑 <span class="math-text">x</span> 人出席</div>
+                    <div>🍗 每人食 <b>2</b> 件</div>
+                </div>
+                <div id="result-left" class="sim-result" style="color:#237804">輸入 <span class="math-text">x</span></div>
+            </div>
+            <div id="vs-right" class="vs-box vs-right">
+                <div class="vs-text-area">
+                    <div class="vs-title"><span class="math-text">x</span>² (乘方)</div>
+                    <div>🧑‍🤝‍🧑 <span class="math-text">x</span> 人出席</div>
+                    <div>🍗 每人食 <span class="math-text">x</span> 件</div>
+                </div>
+                <div id="result-right" class="sim-result" style="color:#c41d7f">輸入 <span class="math-text">x</span></div>
+            </div>
+        </div>
+    `;
+
+const teachQuestions = [
+        { icons: "🍔", text: "買 1 個漢堡包，即是多少錢？", answers: ["x"], menuType: "food" },
+        { icons: "🍔 🍔 🍔", text: "買 3 個漢堡包，即是多少錢？", answers: ["3x"], menuType: "food" },
+        { icons: "🍔🍔🍔 ➕ 🍟🍟", text: "買 3 個漢堡包 和 2 包薯條，即是多少錢？", answers: ["3x+2y", "2y+3x"], menuType: "food" },
+        
+        // 🌟 這裡修改了：加入了沒有括號的答案，因為分數線本身已具備括號功能
+        { icons: "(🍔 ➕ 🍟) ➗ 👨‍👩‍👧", text: "買 1 個漢堡包和 1 包薯條，由 3 個人平分付款。", answers: ["(x+y)÷3", "(y+x)÷3", "x+y÷3", "y+x÷3"], menuType: "food" },
+        
+        { icons: rectHTML, text: "這張長方形餐桌的面積是多少？", answers: ["2x"], menuType: "table2x" },
+        { icons: squareHTML, text: "這張正方形餐桌的面積是多少？", answers: ["x²"], menuType: "tablexx" },
+        { icons: "", text: partySimHTML, answers: ["simulation"], menuType: "nuggetSim" }
+    ];
+
+    function showHome() {
+        document.getElementById("home-screen").style.display = "flex";
+        document.getElementById("game-screen").style.display = "none";
+        document.getElementById("home-btn").style.display = "none";
+        document.getElementById("mode-badge").style.display = "none";
+    }
+
+    function startMode(mode) {
+        currentMode = mode;
+        document.getElementById("home-screen").style.display = "none";
+        document.getElementById("game-screen").style.display = "flex";
+        document.getElementById("home-btn").style.display = "block";
+        document.getElementById("mode-badge").style.display = "block";
+        
+        if (mode === 'teach') {
+            currentStage = 0;
+            document.getElementById("mode-badge").innerText = "👨‍🏫 教學模式";
+            loadTeachQuestion();
+        } else {
+            currentStage = 1;
+            generateGameQuestion();
+        }
+    }
+
+    function loadTeachQuestion() {
+        clearAll();
+        let q = teachQuestions[currentStage];
+        setupUI(q.menuType, q.icons, q.text);
+        currentTargetAnswers = q.answers;
+    }
+
+    function generateGameQuestion() {
+        clearAll();
+        document.getElementById("mode-badge").innerText = `🕹️ 挑戰 (${currentStage}/5)`;
+        currentTargetAnswers = [];
+
+        if (currentStage === 1) { 
+            let item = Math.random() > 0.5 ? "🍟" : "🥤";
+            setupUI("food", item, `買 1 份${item === "🍟" ? "薯條" : "汽水"}，即是多少錢？`);
+            currentTargetAnswers.push(item === "🍟" ? "y" : "z");
+        } else if (currentStage === 2) { 
+            let n = Math.floor(Math.random() * 6) + 3;
+            setupUI("food", "🍔".repeat(n), `買 ${n} 個漢堡包，即是多少錢？`);
+            currentTargetAnswers.push(`${n}x`);
+        } else if (currentStage === 3) { 
+            let n1 = Math.floor(Math.random() * 4) + 2; let n2 = Math.floor(Math.random() * 3) + 2;
+            setupUI("food", "🍔".repeat(n1) + " ➕ " + "🥤".repeat(n2), `買 ${n1} 個漢堡包 和 ${n2} 杯汽水，即是多少錢？`);
+            currentTargetAnswers.push(`${n1}x+${n2}z`, `${n2}z+${n1}x`);
+        } else if (currentStage === 4) { 
+            let p = Math.floor(Math.random() * 3) + 2;
+            setupUI("food", `(🍟🍟) ➗ 🧑‍🤝‍🧑 (${p}人)`, `買 2 包薯條，由 ${p} 個人平分付款。`);
+            currentTargetAnswers.push(`2y÷${p}`);
+        } else if (currentStage === 5) { 
+            let sqZ = squareHTML.replace(/>x</g, ">z<");
+            setupUI("tablexx", sqZ, "求這張正方形餐桌的面積。");
+            currentTargetAnswers.push(`z²`);
+        }
+    }
+
+    function setupUI(menuType, icons, text) {
+        if (menuType !== null) {
+            let menuHTML = "";
+            let btnSubmit = document.getElementById("btn-submit");
+            let btnFinish = document.getElementById("btn-finish");
+
+            if (menuType === "food") {
+                menuHTML = `<div class="menu-item">🍔=$<span class="math-text">x</span></div> <div class="menu-item">🍟=$<span class="math-text">y</span></div> <div class="menu-item">🥤=$<span class="math-text">z</span></div>`;
+                btnSubmit.style.gridColumn = "span 3"; btnFinish.style.display = "none";
+            } else if (menuType === "table2x" || menuType === "tablexx") {
+                menuHTML = `<div class="menu-item">🪑 提示：面積 = 長 × 闊</div>`;
+                btnSubmit.style.gridColumn = "span 3"; btnFinish.style.display = "none";
+            } else if (menuType === "nuggetSim") {
+                menuHTML = `<div class="menu-item">⌨️ 實驗室：輸入 <span class="math-text">x</span> 數值，按下提交！</div>`;
+                btnSubmit.style.gridColumn = "span 2";
+                btnFinish.style.display = "flex";
+            }
+            document.getElementById("menu-bar").innerHTML = menuHTML;
+        }
+        if(icons !== "") document.getElementById("food-icons").innerHTML = icons;
+        if(text !== "") document.getElementById("question-text").innerHTML = text;
+    }
+
+    function typeChar(char) { currentInput += char; updateDisplay(); }
+    function backspace() { currentInput = currentInput.slice(0, -1); updateDisplay(); }
+    function clearAll() { currentInput = ""; updateDisplay(); }
+    function updateDisplay() {
+        const screen = document.getElementById("display-screen");
+        if (currentInput.includes('÷')) {
+            const parts = currentInput.split('÷');
+            screen.innerHTML = `<div class="fraction"><div class="numerator">${parts[0]||"?"}</div><div class="denominator">${parts[1]||""}</div></div>`;
+        } else {
+            screen.innerHTML = currentInput;
+        }
+    }
+
+    // ====== 超級 3D 物理掉落引擎 ======
+    function dropNuggets(containerId, count) {
+        const container = document.getElementById(containerId);
+        
+        // 清理舊的麥樂雞
+        const oldNuggets = container.querySelectorAll('.nugget-particle');
+        oldNuggets.forEach(n => n.remove());
+
+        // 保護 iPad 效能，畫面最多同時渲染 1200 隻
+        const visualCount = Math.min(count, 1200); 
+        
+        let i = 0;
+        function spawnBatch() {
+            let batchSize = Math.min(25, visualCount - i);
+            for (let j = 0; j < batchSize; j++) {
+                let el = document.createElement('div');
+                el.innerText = '🍗';
+                el.className = 'nugget-particle';
+                
+                // X 軸分佈 (稍微集中在中段，避免跑到框外)
+                el.style.left = (Math.random() * 80 + 5) + '%';
+                
+                // 掉落終點高度，因為框變扁了，讓它們堆積在底層 (40% - 95%)
+                let endY = 40 + Math.random() * 55; 
+                el.style.setProperty('--endY', endY + '%');
+                
+                let rot = Math.random() * 360;
+                el.style.setProperty('--rot', rot + 'deg');
+                
+                let dur = 0.4 + Math.random();
+                el.style.animationDuration = dur + 's';
+
+                container.appendChild(el);
+            }
+            i += batchSize;
+            if (i < visualCount) {
+                requestAnimationFrame(spawnBatch);
+            }
+        }
+        spawnBatch();
+    }
+
+    function checkAnswer() {
+        if (currentInput === "") return;
+        const userAns = currentInput.replace(/\s/g, ''); 
+
+        // ====== 關卡 7：互動物理模擬邏輯 ======
+        if (currentMode === 'teach' && currentStage === 6) {
+            let num = parseInt(userAns);
+            if (isNaN(num)) {
+                showModal("💡 提示", "這裡只能輸入整數喔！", false);
+                clearAll(); return;
+            }
+
+            let leftCount = 2 * num;
+            let rightCount = num * num;
+
+            // 即時更新文字，毛玻璃框會一直壓在麥樂雞之上，而且高度固定不會遮到上面的字
+            document.getElementById('result-left').innerHTML = `2 × ${num} = <span style="font-size:32px;">${leftCount}</span>`;
+            document.getElementById('result-right').innerHTML = `${num} × ${num} = <span style="font-size:32px;">${rightCount}</span>`;
+
+            // 啟動 3D 麥樂雞大瀑布
+            dropNuggets('vs-left', leftCount);
+            dropNuggets('vs-right', rightCount);
+
+            clearAll(); 
+            return; 
+        }
+
+        // --- 常規防呆邏輯 ---
+        if (userAns.includes("×")) {
+            if (userAns === "x×x" || userAns === "y×y" || userAns === "z×z") {
+                showModal("💡 可以更簡單！", "同一個未知數自己乘自己，我們會寫成「平方」（²）。", false); return;
+            }
+            showModal("💡 懶惰的數學家", "在代數世界，代數與數字相乘時，我們習慣<b>省略乘號</b>「×」喔！", false); return;
+        }
+        if (userAns.match(/\b1[xyz]/)) { showModal("💡 隱藏的特務 1", "通常會省略字母前面的「1」喔！", false); return; }
+        if (userAns.match(/[xyz][2-9]/) && !userAns.includes("²")) { showModal("💡 數字做大哥", "數字要排在英文字母的前面喔。", false); return; }
+        if (userAns.includes("xy") || userAns.includes("xz") || userAns.includes("yz")) { showModal("💡 蘋果與橙", "不同未知數不能混在一起相加。", false); return; }
+
+        if (userAns.includes("x+x") || userAns.includes("y+y") || userAns.includes("z+z")) {
+            if (currentMode === 'teach' && currentStage === 4 && userAns === "x+x") {
+                 showModal("💡 概念正確！", "長和寬加起來是 x+x 沒錯！<br>不過用乘法寫成 <b>2x</b> 會更漂亮喔！", false); return;
+            }
+            showModal("💡 概念正確！", "加法是這樣算沒錯！不過遇到相同字母重複相加，我們會用<b>乘法</b>將它縮短。", false); return;
+        }
+
+        // 檢查常規答案
+        if (currentTargetAnswers.includes(userAns)) {
+            isWaitingForNext = true;
+            let congratsMsg = "答案完全正確！";
+            if (currentMode === 'teach') {
+                if (currentStage === 3) congratsMsg = "太厲害了！你掌握了<b>分數線就是除號</b>！";
+                if (currentStage === 4) congratsMsg = "答對了！長方形面積 (2乘x)，即是 <b>2x</b>。";
+                if (currentStage === 5) congratsMsg = "完美！同一個英文字相乘會升級變成<b>平方 (x²)</b>！<br><br>接下來，進入魔法實驗室...";
+            }
+            showModal("🎉 太棒了！", congratsMsg, true);
+        } else {
+            isWaitingForNext = false;
+            showModal("💪 再想一想", "好像有點不對，再仔細看看圖案和提示喔！", false);
+        }
+    }
+
+    function showModal(title, msg, isCorrect) {
+        document.getElementById("modal-title").innerText = title;
+        document.getElementById("modal-title").className = isCorrect ? "modal-title-correct" : "modal-title-hint";
+        document.getElementById("modal-msg").innerHTML = msg;
+        
+        let btn = document.querySelector(".modal-btn");
+        if (isCorrect) {
+            btn.innerText = (currentMode === 'game' && currentStage === 5) ? "🏆 領取挑戰獎盃" : "下一關 ➔";
+        } else {
+            btn.innerText = "返回修改";
+        }
+        document.getElementById("feedback-modal").style.display = "flex";
+    }
+
+    function nextAction() {
+        document.getElementById("feedback-modal").style.display = "none";
+        if (isWaitingForNext) {
+            isWaitingForNext = false;
+            currentStage++;
+            if (currentMode === 'teach') {
+                loadTeachQuestion();
+            } else {
+                if (currentStage <= 5) generateGameQuestion();
+                else { alert("🏆 太厲害了！成為代數大師！"); showHome(); }
+            }
+        }
+    }
+
+    function finishTeachMode() {
+        alert("🌟 恭喜全班完成代數七大概念闖關！這就是 x² 的驚人威力！");
+        showHome();
+    }
+
+    window.onload = showHome;
+</script>
+
+</body>
+</html>
